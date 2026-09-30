@@ -53,7 +53,6 @@ function saveData(client, data) {
         const oldData = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {};
         if (!oldData.gameSpoofing || oldData.selectedGame !== data.selectedGame || !oldData.epochGameTimestamp) {
             data.epochGameTimestamp = Date.now();
-
         } else {
             data.epochGameTimestamp = oldData.epochGameTimestamp;
         }
@@ -132,17 +131,8 @@ async function setPresence(client, data) {
                 delete rpcActivity.metadata;
             }
 
-            // --- SPOOFING LOGIC ---
-            if (data.gameSpoofing) {
-                delete rpcActivity.details;
-                delete rpcActivity.state;
-                rpcActivity.assets = {};
-                delete rpcActivity.buttons;
-                delete rpcActivity.metadata;
-
-                rpcActivity.type = 'PLAYING';
-                rpcActivity.timestamps = { start: data.epochGameTimestamp || Date.now() };
-
+            // --- SPOOFING LOGIC (FIXED) ---
+            if (data.gameSpoofing && data.selectedGame && data.selectedGame !== 'none' && data.selectedGame !== '') {
                 const spoofGames = {
                     'minecraft': { app_id: '1402418491272986635', name: 'Minecraft', img: 'https://cdn.discordapp.com/app-icons/1402418491272986635/166fbad351ecdd02d11a3b464748f66b.png?size=240&keep_aspect_ratio=false' },
                     'genshin': { app_id: '762434991303950386', name: 'Genshin Impact', img: 'https://cdn.discordapp.com/app-icons/762434991303950386/eb0e25b739e4fa38c1671a3d1edcd1e0.png?size=240&keep_aspect_ratio=false' },
@@ -155,18 +145,23 @@ async function setPresence(client, data) {
                     'cs2': { app_id: '1158877933042143272', name: 'Counter-Strike 2', img: 'https://cdn.discordapp.com/app-icons/1158877933042143272/558f5a26ecb3b17c3dea3d15c1df537a.png?size=80&keep_aspect_ratio=false' }
                 };
 
-                if (data.selectedGame && spoofGames[data.selectedGame]) {
+                if (spoofGames[data.selectedGame]) {
                     const gameInfo = spoofGames[data.selectedGame];
                     rpcActivity.application_id = gameInfo.app_id;
                     rpcActivity.name = gameInfo.name;
                     rpcActivity.assets.large_image = gameInfo.img;
+                    delete rpcActivity.details;
+                    delete rpcActivity.state;
+                    delete rpcActivity.buttons;
+                    delete rpcActivity.metadata;
+                    rpcActivity.timestamps = { start: data.epochGameTimestamp || Date.now() };
                 }
             } else if (data.spoofEnabled) {
                 if (data.spoofType === 'crunchyroll') {
                     rpcActivity.application_id = '981509069309354054';
                 } else if (data.spoofType === 'playstation') {
                     rpcActivity.application_id = '1008890872156405890';
-                    rpcActivity.platform = 'ps5'; // Specifically inject the platform for PS5
+                    rpcActivity.platform = 'ps5';
                 }
             }
 
